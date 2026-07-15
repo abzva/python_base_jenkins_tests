@@ -1,6 +1,7 @@
 import pytest
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from utils import attach
 
 @pytest.fixture(scope='function')
 def driver():
