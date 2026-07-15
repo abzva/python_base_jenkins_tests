@@ -9,6 +9,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RESOURCES_DIR = os.path.join(BASE_DIR, '..', 'resources')
 
 
+@allure.epic("Web Application")
 @allure.feature("Registration Form")
 class TestRegistrationForm:
 
@@ -121,16 +122,22 @@ class TestRegistrationForm:
         gender = 'Female'
         mobile = str(random.randint(7900000000, 7999999999))
 
-        page.close_popup()
-        page.input_first_name(first_name)
-        page.input_last_name(last_name)
-        page.select_gender(gender)
-        page.input_mobile_number(mobile)
-        page.clear_first_name()
-        page.input_first_name(new_first_name)
-        page.click_button()
+        with allure.step("Заполнить форму первоначальным именем"):
+            page.close_popup()
+            page.input_first_name(first_name)
+            page.input_last_name(last_name)
+            page.select_gender(gender)
+            page.input_mobile_number(mobile)
 
-        result = page.get_result_text()
+        with allure.step("Очистить и ввести новое имя"):
+            page.clear_first_name()
+            page.input_first_name(new_first_name)
+
+        with allure.step("Отправить форму"):
+            page.click_button()
+
+        with allure.step("Проверить результат"):
+            result = page.get_result_text()
 
         checks = {
             'first_name': new_first_name in result,
@@ -145,23 +152,42 @@ class TestRegistrationForm:
     @allure.story("Валидация обязательных полей")
     @allure.title("Регистрация без обязательных параметров")
     @allure.severity(allure.severity_level.CRITICAL)
-    @pytest.mark.parametrize("first_name, last_name, gender, mobile, expected_error", [
-        ('Matvei', 'Litvin', 'Female', '', 'Please fill required fields and enter a valid 10-digit mobile number.'),
-        pytest.param('', 'Litvin', 'Female', str(random.randint(7900000000, 7999999999)),
-                     'Please fill required fields and enter a valid First Name.', marks=pytest.mark.xfail),
-        pytest.param('', 'Litvin', None, str(random.randint(7900000000, 7999999999)),
-                     'Please fill required fields and enter a valid Gender', marks=pytest.mark.xfail)
-    ])
+    @pytest.mark.parametrize(
+        "first_name, last_name, gender, mobile, expected_error",
+        [
+            pytest.param(
+                'Matvei', 'Litvin', 'Female', '',
+                'Please fill required fields and enter a valid 10-digit mobile number.',
+                id='empty_mobile'
+            ),
+            pytest.param(
+                '', 'Litvin', 'Female', str(random.randint(7900000000, 7999999999)),
+                'Please fill required fields and enter a valid First Name.',
+                marks=pytest.mark.xfail,
+                id='empty_first_name'
+            ),
+            pytest.param(
+                '', 'Litvin', None, str(random.randint(7900000000, 7999999999)),
+                'Please fill required fields and enter a valid Gender',
+                marks=pytest.mark.xfail,
+                id='empty_gender'
+            ),
+        ]
+    )
     def test_registration_without_required_parameters(self, driver, first_name, last_name, gender, mobile,
                                                       expected_error):
         page = RegistrationFormPage(driver)
         page.open()
 
-        page.close_popup()
-        page.input_first_name(first_name)
-        page.input_last_name(last_name)
-        page.select_gender(gender)
-        page.input_mobile_number(mobile)
-        page.click_button()
+        with allure.step("Заполнить форму с недостающими обязательными полями"):
+            page.close_popup()
+            page.input_first_name(first_name)
+            page.input_last_name(last_name)
+            page.select_gender(gender)
+            page.input_mobile_number(mobile)
 
-        assert page.wait_for_status_message(expected_error)
+        with allure.step("Отправить форму"):
+            page.click_button()
+
+        with allure.step(f"Проверить сообщение об ошибке: {expected_error}"):
+            assert page.wait_for_status_message(expected_error)
